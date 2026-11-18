@@ -26,7 +26,7 @@ Este é o projeto de referência que construo, aula a aula, junto com meus aluno
 
 O desenvolvimento segue a sequência das apostilas oficiais do curso. Cada conteúdo teórico vira código funcionando em sala: os alunos acompanham a implementação, reproduzem os exemplos nos próprios projetos e usam este repositório como gabarito para revisar, comparar soluções e retomar qualquer aula em que tenham faltado.
 
-Por isso o projeto cresce de forma incremental. Ele parte da estrutura básica de uma aplicação NestJS e chega a uma API documentada, validada, com tratamento de erros, middlewares, upload de mídia e persistência em MongoDB.
+Por isso o projeto cresce de forma incremental. Ele parte da estrutura básica de uma aplicação NestJS e evolui para uma API documentada, validada, com tratamento de erros, middlewares, upload de mídia e persistência em MongoDB. O repositório acompanha a turma em tempo real e recebe novos commits a cada aula.
 
 ## Como navegar pelas aulas
 
@@ -45,6 +45,10 @@ Os commits são numerados de acordo com a aula correspondente. Para ver exatamen
 | 16 | Validação de dados com schemas Zod e pipes personalizados |
 | 17 | Documentação da API com Swagger (OpenAPI) |
 | 18 | Integração com MongoDB (Mongoose) e segurança |
+
+> A aula 14 foi desenvolvida em um repositório à parte, por isso não aparece nesta sequência.
+
+> 🚧 **Curso em andamento:** novas aulas são adicionadas a este repositório, e a esta tabela, conforme o conteúdo avança.
 
 ## O que o projeto aborda
 
