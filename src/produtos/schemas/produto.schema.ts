@@ -3,7 +3,8 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 // Industrial". Contrato do Produto gravado no MongoDB.
 @Schema({ timestamps: true })
 export class Produto {
-  @Prop({ required: true, trim: true })
+  // Aula 21: unique impede dois produtos com o mesmo nome (erro 11000 do MongoDB).
+  @Prop({ required: true, trim: true, unique: true })
   nome: string;
   @Prop({ required: true, min: 0 })
   preco: number;

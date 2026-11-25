@@ -7,6 +7,7 @@ import { CreateProdutoDto } from './dto/create-produto.dto.js';
 @Controller('produtos')
 export class ProdutosController {
   constructor(private readonly produtosService: ProdutosService) {}
+  
   // POST /produtos
   @Post()
   @ApiOperation({ summary: 'Cria um novo produto' })
@@ -14,11 +15,17 @@ export class ProdutosController {
     status: 201,
     description: 'Produto criado com sucesso.',
   })
-
-  criar(@Body() createProdutoDto: CreateProdutoDto) {
+  @ApiResponse({
+    status: 400,
+    description: 'Dados recusados pelo Schema.',
+  })
+  @ApiResponse({
+    status: 409,
+    description: 'Produto já registrado.',
+  })
+  async criar(@Body() createProdutoDto: CreateProdutoDto) {
     return this.produtosService.create(createProdutoDto);
   }
-  
   // GET /produtos/:id
   @Get(':id')
   @ApiOperation({ summary: 'Busca um produto pelo ID' })
@@ -26,17 +33,14 @@ export class ProdutosController {
     status: 200,
     description: 'Produto encontrado.',
   })
-
   @ApiResponse({
     status: 400,
     description: 'ID em formato inválido.',
   })
-
   @ApiResponse({
     status: 404,
     description: 'Produto não encontrado.',
   })
-  
   buscarPorId(@Param('id') id: string) {
     return this.produtosService.findOne(id);
   }
