@@ -9,6 +9,7 @@ describe('ProdutosController', () => {
     create: vi.fn(),
     findAll: vi.fn(),
     findOne: vi.fn(),
+    update: vi.fn(),
   };
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -25,13 +26,23 @@ describe('ProdutosController', () => {
   it('should be defined', () => {
     expect(controller).toBeDefined();
   });
-  it('buscarPorId deve devolver o produto', () => {
-    produtosService.findOne.mockReturnValue({
-      id: 2,
+  it('buscarPorId deve devolver o produto', async () => {
+    produtosService.findOne.mockResolvedValue({
       nome: 'Mouse',
-      preco: 80,
     });
-    expect(controller.buscarPorId('2').nome).toBe('Mouse');
+    const produto = await controller.buscarPorId('abc');
+    expect(produtosService.findOne).toHaveBeenCalledWith('abc');
+    expect(produto).toMatchObject({ nome: 'Mouse' });
+  });
+  it('atualizar deve repassar o id e os campos', async () => {
+    produtosService.update.mockResolvedValue({
+      preco: 2500,
+    });
+    const resultado = await controller.atualizar('abc', {
+      preco: 2500,
+    });
+    expect(produtosService.update).toHaveBeenCalledWith('abc', { preco: 2500 });
+    expect(resultado).toEqual({ preco: 2500 });
   });
   it('criar deve devolver o documento criado', async () => {
     const dto = {

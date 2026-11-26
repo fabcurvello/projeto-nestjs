@@ -14,6 +14,8 @@ describe('ProdutosService', () => {
   const produtoModel = {
     create: vi.fn(),
     find: vi.fn(),
+    findById: vi.fn(),
+    findByIdAndUpdate: vi.fn(),
   };
   // Cadeia find().select().sort().skip().limit().exec() falsa.
   const consulta = {
@@ -30,6 +32,8 @@ describe('ProdutosService', () => {
   };
   beforeEach(async () => {
     produtoModel.create.mockReset();
+    produtoModel.findById.mockReset();
+    produtoModel.findByIdAndUpdate.mockReset();
     produtoModel.find.mockReset().mockReturnValue(consulta);
     for (const metodo of ['select', 'sort', 'skip', 'limit']) {
       consulta[metodo as 'select'].mockReset().mockReturnValue(consulta);
@@ -116,21 +120,127 @@ describe('ProdutosService', () => {
     await service.findAll({ pagina: '-3' });
     expect(consulta.skip).toHaveBeenLastCalledWith(0);
   });
-  it('findOne deve retornar o produto encontrado', () => {
-    expect(service.findOne('1')).toEqual({
-      id: 1,
-      nome: 'Notebook',
-      preco: 3500,
+  // Consulta falsa: findById(...).select(...) devolve o valor.
+  const consultaCom = (resultado: unknown, erro = false) => ({
+    select: erro
+      ? vi.fn().mockRejectedValue(resultado)
+      : vi.fn().mockResolvedValue(resultado),
+  });
+  const ID = '64f3a1b2c9e0d1f2a3b4c5d6';
+  const erroDeId = {
+    name: 'CastError',
+    path: '_id',
+    message: 'Cast to ObjectId failed',
+  };
+  it('findOne deve devolver o produto do banco', async () => {
+    const doc = { _id: ID, nome: 'Mouse' };
+    produtoModel.findById.mockReturnValue(consultaCom(doc));
+    await expect(service.findOne(ID)).resolves.toBe(doc);
+    expect(produtoModel.findById).toHaveBeenCalledWith(ID);
+  });
+  it('findOne deve lançar 404 se não existir', async () => {
+    produtoModel.findById.mockReturnValue(consultaCom(null));
+    await expect(service.findOne(ID)).rejects.toThrow(
+      new NotFoundException(`Produto com ID ${ID} não encontrado`),
+    );
+  });
+  it('findOne deve lançar 400 para ID inválido', async () => {
+    produtoModel.findById.mockReturnValue(consultaCom(erroDeId, true));
+    await expect(service.findOne('abc')).rejects.toThrow(
+      new BadRequestException('O ID fornecido não é um ObjectId válido'),
+    );
+  });
+  describe('update', () => {
+    let log: ReturnType<typeof vi.spyOn>;
+    beforeEach(() => {
+      log = vi.spyOn(console, 'log').mockImplementation(() => undefined);
     });
-  });
-  it('findOne deve lançar BadRequestException para ID não numérico', () => {
-    expect(() => service.findOne('abc')).toThrow(
-      new BadRequestException('O ID fornecido deve ser do tipo inteiro'),
-    );
-  });
-  it('findOne deve lançar NotFoundException para ID inexistente', () => {
-    expect(() => service.findOne('999')).toThrow(
-      new NotFoundException('Produto com ID 999 não encontrado'),
-    );
+    afterEach(() => log.mockRestore());
+    const atualizacao = (resultado: unknown, erro = false) =>
+      produtoModel.findByIdAndUpdate.mockReturnValue(
+        consultaCom(resultado, erro),
+      );
+    it('deve devolver o documento já atualizado', async () => {
+      const doc = { _id: ID, preco: 2500 };
+      atualizacao(doc);
+      await expect(service.update(ID, { preco: 2500 })).resolves.toBe(doc);
+      expect(produtoModel.findByIdAndUpdate).toHaveBeenCalledWith(
+        ID,
+        { $set: { preco: 2500 } },
+        {
+          returnDocument: 'after',
+          runValidators: true,
+        },
+      );
+    });
+    it('deve ignorar campos protegidos (_id, createdAt)', async () => {
+      atualizacao({ _id: ID });
+      await service.update(ID, {
+        preco: 10,
+        _id: 'outro',
+        createdAt: '2000-01-01',
+      } as never);
+      expect(produtoModel.findByIdAndUpdate).toHaveBeenCalledWith(
+        ID,
+        { $set: { preco: 10 } },
+        expect.anything(),
+      );
+    });
+    it('deve lançar 404 se o ID não existir', async () => {
+      atualizacao(null);
+      await expect(service.update(ID, { preco: 1 })).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+    it('deve lançar 400 para ID mal formado', async () => {
+      atualizacao(erroDeId, true);
+      await expect(service.update('abc', { preco: 1 })).rejects.toThrow(
+        new BadRequestException('O ID fornecido não é um ObjectId válido'),
+      );
+    });
+    it('deve lançar 400 para valor que não vira número', async () => {
+      atualizacao(
+        {
+          name: 'CastError',
+          path: 'preco',
+          message: 'Cast to Number failed',
+        },
+        true,
+      );
+      await expect(
+        service.update(ID, { preco: 'abc' as never }),
+      ).rejects.toThrow(new BadRequestException('Cast to Number failed'));
+    });
+    it('deve lançar 400 para ValidationError', async () => {
+      atualizacao(
+        {
+          name: 'ValidationError',
+          errors: {
+            preco: { message: 'preço inválido' },
+          },
+        },
+        true,
+      );
+      await expect(service.update(ID, { preco: -1 })).rejects.toThrow(
+        new BadRequestException('preço inválido'),
+      );
+    });
+    it('deve lançar 409 para nome duplicado', async () => {
+      atualizacao({ code: 11000 }, true);
+      await expect(service.update(ID, { nome: 'Repetido' })).rejects.toThrow(
+        ConflictException,
+      );
+    });
+    it('deve alertar estoque crítico (menor que 5)', async () => {
+      atualizacao({ _id: ID, estoque: 3 });
+      await service.update(ID, { estoque: 3 });
+      expect(log).toHaveBeenCalledWith('Atenção: Estoque Crítico');
+    });
+    it('não deve alertar com estoque 5 ou sem estoque', async () => {
+      atualizacao({ _id: ID });
+      await service.update(ID, { estoque: 5 });
+      await service.update(ID, { preco: 9 });
+      expect(log).not.toHaveBeenCalled();
+    });
   });
 });
