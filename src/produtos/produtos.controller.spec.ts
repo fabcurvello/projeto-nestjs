@@ -7,6 +7,7 @@ describe('ProdutosController', () => {
   // Service falso: o controller é testado sem o Mongoose.
   const produtosService = {
     create: vi.fn(),
+    findAll: vi.fn(),
     findOne: vi.fn(),
   };
   beforeEach(async () => {
@@ -45,5 +46,12 @@ describe('ProdutosController', () => {
     const criado = await controller.criar(dto);
     expect(produtosService.create).toHaveBeenCalledWith(dto);
     expect(criado).toMatchObject({ _id: 'abc123' });
+  });
+  it('findAll deve repassar os filtros ao service', async () => {
+    const filtros = { categoria: 'EPI', pagina: '2' };
+    produtosService.findAll.mockResolvedValue([{ nome: 'Luva' }]);
+    const lista = await controller.findAll(filtros);
+    expect(produtosService.findAll).toHaveBeenCalledWith(filtros);
+    expect(lista).toHaveLength(1);
   });
 });
