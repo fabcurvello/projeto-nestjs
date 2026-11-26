@@ -10,6 +10,7 @@ describe('ProdutosController', () => {
     findAll: vi.fn(),
     findOne: vi.fn(),
     update: vi.fn(),
+    delete: vi.fn(),
   };
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -64,5 +65,10 @@ describe('ProdutosController', () => {
     const lista = await controller.findAll(filtros);
     expect(produtosService.findAll).toHaveBeenCalledWith(filtros);
     expect(lista).toHaveLength(1);
+  });
+  it('remover deve chamar o service e não devolver corpo', async () => {
+    produtosService.delete.mockResolvedValue(undefined);
+    await expect(controller.remover('abc')).resolves.toBeUndefined();
+    expect(produtosService.delete).toHaveBeenCalledWith('abc');
   });
 });

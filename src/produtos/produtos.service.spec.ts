@@ -16,6 +16,7 @@ describe('ProdutosService', () => {
     find: vi.fn(),
     findById: vi.fn(),
     findByIdAndUpdate: vi.fn(),
+    findByIdAndDelete: vi.fn(),
   };
   // Cadeia find().select().sort().skip().limit().exec() falsa.
   const consulta = {
@@ -34,6 +35,7 @@ describe('ProdutosService', () => {
     produtoModel.create.mockReset();
     produtoModel.findById.mockReset();
     produtoModel.findByIdAndUpdate.mockReset();
+    produtoModel.findByIdAndDelete.mockReset();
     produtoModel.find.mockReset().mockReturnValue(consulta);
     for (const metodo of ['select', 'sort', 'skip', 'limit']) {
       consulta[metodo as 'select'].mockReset().mockReturnValue(consulta);
@@ -241,6 +243,38 @@ describe('ProdutosService', () => {
       await service.update(ID, { estoque: 5 });
       await service.update(ID, { preco: 9 });
       expect(log).not.toHaveBeenCalled();
+    });
+  });
+  describe('delete', () => {
+    it('deve apagar o produto com estoque zerado', async () => {
+      produtoModel.findById.mockReturnValue(
+        consultaCom({ _id: ID, estoque: 0 }),
+      );
+      produtoModel.findByIdAndDelete.mockResolvedValue({});
+      await expect(service.delete(ID)).resolves.toBeUndefined();
+      expect(produtoModel.findByIdAndDelete).toHaveBeenCalledWith(ID);
+    });
+    it('deve recusar (400) se houver estoque', async () => {
+      produtoModel.findById.mockReturnValue(
+        consultaCom({ _id: ID, estoque: 3 }),
+      );
+      await expect(service.delete(ID)).rejects.toThrow(
+        new BadRequestException(
+          'Não é possível excluir produtos com itens em estoque',
+        ),
+      );
+      expect(produtoModel.findByIdAndDelete).not.toHaveBeenCalled();
+    });
+    it('deve lançar 404 se o produto não existir', async () => {
+      produtoModel.findById.mockReturnValue(consultaCom(null));
+      await expect(service.delete(ID)).rejects.toThrow(NotFoundException);
+      expect(produtoModel.findByIdAndDelete).not.toHaveBeenCalled();
+    });
+    it('deve lançar 400 para ID mal formado', async () => {
+      produtoModel.findById.mockReturnValue(consultaCom(erroDeId, true));
+      await expect(service.delete('abc')).rejects.toThrow(
+        new BadRequestException('O ID fornecido não é um ObjectId válido'),
+      );
     });
   });
 });
