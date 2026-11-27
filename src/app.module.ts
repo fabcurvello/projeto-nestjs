@@ -9,6 +9,9 @@ import {
 } from './categorias/schemas/categoria.schema.js';
 import { CategoriasController } from './categorias/categorias.controller.js';
 import { CategoriasService } from './categorias/categorias.service.js';
+import { Usuario, UsuarioSchema } from './usuarios/schemas/usuario.schema.js';
+import { UsuariosController } from './usuarios/usuarios.controller.js';
+import { UsuariosService } from './usuarios/usuarios.service.js';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 import { ConvidadosController } from './convidados/convidados.controller.js';
@@ -57,6 +60,8 @@ import { ColaboradoresController } from './colaboradores/colaboradores.controlle
       { name: Produto.name, schema: ProdutoSchema },
       // Aula 25: Model da Categoria (referenciada pelo Produto).
       { name: Categoria.name, schema: CategoriaSchema },
+      // Aula 26: Model do Usuário (com o hook pre-save).
+      { name: Usuario.name, schema: UsuarioSchema },
     ]),
   ],
   controllers: [
@@ -69,6 +74,7 @@ import { ColaboradoresController } from './colaboradores/colaboradores.controlle
     ProdutosController,
     ColaboradoresController,
     CategoriasController,
+    UsuariosController,
   ],
   providers: [
     AppService,
@@ -76,6 +82,7 @@ import { ColaboradoresController } from './colaboradores/colaboradores.controlle
     LivrosService,
     ProdutosService,
     CategoriasService,
+    UsuariosService,
   ],
 })
 export class AppModule implements NestModule {
