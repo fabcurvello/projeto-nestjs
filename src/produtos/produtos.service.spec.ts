@@ -21,6 +21,7 @@ describe('ProdutosService', () => {
   // Cadeia find().select().sort().skip().limit().exec() falsa.
   const consulta = {
     select: vi.fn(),
+    populate: vi.fn(),
     sort: vi.fn(),
     skip: vi.fn(),
     limit: vi.fn(),
@@ -37,7 +38,7 @@ describe('ProdutosService', () => {
     produtoModel.findByIdAndUpdate.mockReset();
     produtoModel.findByIdAndDelete.mockReset();
     produtoModel.find.mockReset().mockReturnValue(consulta);
-    for (const metodo of ['select', 'sort', 'skip', 'limit']) {
+    for (const metodo of ['select', 'populate', 'sort', 'skip', 'limit']) {
       consulta[metodo as 'select'].mockReset().mockReturnValue(consulta);
     }
     consulta.exec.mockReset().mockResolvedValue([]);
@@ -122,6 +123,18 @@ describe('ProdutosService', () => {
     await service.findAll({ pagina: '-3' });
     expect(consulta.skip).toHaveBeenLastCalledWith(0);
   });
+  it('findAll deve lançar 400 para filtro de categoria inválido', async () => {
+    consulta.exec.mockRejectedValue({
+      name: 'CastError',
+    });
+    await expect(
+      service.findAll({ categoria: 'nao-e-objectid' }),
+    ).rejects.toThrow(
+      new BadRequestException(
+        'O filtro categoria deve ser o ObjectId de uma Categoria existente',
+      ),
+    );
+  });
   // Consulta falsa: findById(...).select(...) devolve o valor.
   const consultaCom = (resultado: unknown, erro = false) => ({
     select: erro
@@ -129,6 +142,14 @@ describe('ProdutosService', () => {
       : vi.fn().mockResolvedValue(resultado),
   });
   const ID = '64f3a1b2c9e0d1f2a3b4c5d6';
+  // findById(...).select(...).populate(...) falso.
+  const comPopulate = (resultado: unknown, erro = false) => ({
+    select: () => ({
+      populate: erro
+        ? vi.fn().mockRejectedValue(resultado)
+        : vi.fn().mockResolvedValue(resultado),
+    }),
+  });
   const erroDeId = {
     name: 'CastError',
     path: '_id',
@@ -136,18 +157,18 @@ describe('ProdutosService', () => {
   };
   it('findOne deve devolver o produto do banco', async () => {
     const doc = { _id: ID, nome: 'Mouse' };
-    produtoModel.findById.mockReturnValue(consultaCom(doc));
+    produtoModel.findById.mockReturnValue(comPopulate(doc));
     await expect(service.findOne(ID)).resolves.toBe(doc);
     expect(produtoModel.findById).toHaveBeenCalledWith(ID);
   });
   it('findOne deve lançar 404 se não existir', async () => {
-    produtoModel.findById.mockReturnValue(consultaCom(null));
+    produtoModel.findById.mockReturnValue(comPopulate(null));
     await expect(service.findOne(ID)).rejects.toThrow(
       new NotFoundException(`Produto com ID ${ID} não encontrado`),
     );
   });
   it('findOne deve lançar 400 para ID inválido', async () => {
-    produtoModel.findById.mockReturnValue(consultaCom(erroDeId, true));
+    produtoModel.findById.mockReturnValue(comPopulate(erroDeId, true));
     await expect(service.findOne('abc')).rejects.toThrow(
       new BadRequestException('O ID fornecido não é um ObjectId válido'),
     );
@@ -248,7 +269,7 @@ describe('ProdutosService', () => {
   describe('delete', () => {
     it('deve apagar o produto com estoque zerado', async () => {
       produtoModel.findById.mockReturnValue(
-        consultaCom({ _id: ID, estoque: 0 }),
+        comPopulate({ _id: ID, estoque: 0 }),
       );
       produtoModel.findByIdAndDelete.mockResolvedValue({});
       await expect(service.delete(ID)).resolves.toBeUndefined();
@@ -256,7 +277,7 @@ describe('ProdutosService', () => {
     });
     it('deve recusar (400) se houver estoque', async () => {
       produtoModel.findById.mockReturnValue(
-        consultaCom({ _id: ID, estoque: 3 }),
+        comPopulate({ _id: ID, estoque: 3 }),
       );
       await expect(service.delete(ID)).rejects.toThrow(
         new BadRequestException(
@@ -266,12 +287,12 @@ describe('ProdutosService', () => {
       expect(produtoModel.findByIdAndDelete).not.toHaveBeenCalled();
     });
     it('deve lançar 404 se o produto não existir', async () => {
-      produtoModel.findById.mockReturnValue(consultaCom(null));
+      produtoModel.findById.mockReturnValue(comPopulate(null));
       await expect(service.delete(ID)).rejects.toThrow(NotFoundException);
       expect(produtoModel.findByIdAndDelete).not.toHaveBeenCalled();
     });
     it('deve lançar 400 para ID mal formado', async () => {
-      produtoModel.findById.mockReturnValue(consultaCom(erroDeId, true));
+      produtoModel.findById.mockReturnValue(comPopulate(erroDeId, true));
       await expect(service.delete('abc')).rejects.toThrow(
         new BadRequestException('O ID fornecido não é um ObjectId válido'),
       );

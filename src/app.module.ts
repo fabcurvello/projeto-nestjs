@@ -2,6 +2,13 @@ import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import type { Connection } from 'mongoose';
+import { Produto, ProdutoSchema } from './produtos/schemas/produto.schema.js';
+import {
+  Categoria,
+  CategoriaSchema,
+} from './categorias/schemas/categoria.schema.js';
+import { CategoriasController } from './categorias/categorias.controller.js';
+import { CategoriasService } from './categorias/categorias.service.js';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 import { ConvidadosController } from './convidados/convidados.controller.js';
@@ -14,14 +21,12 @@ import { AdminController } from './admin/admin.controller.js';
 import { LoggerMiddleware } from './logger/logger.middleware.js';
 import { ProdutosController } from './produtos/produtos.controller.js';
 import { ProdutosService } from './produtos/produtos.service.js';
-import { Produto, ProdutoSchema } from './produtos/schemas/produto.schema.js';
 import { ColaboradoresController } from './colaboradores/colaboradores.controller.js';
 
 @Module({
   imports: [
     // Aula 18: variáveis de ambiente em toda a aplicação.
     ConfigModule.forRoot({ isGlobal: true }),
-
     // Aula 19: conexão com o MongoDB gerenciada pelo Nest
     // (substitui o mongoose.connect() manual do main.ts).
     MongooseModule.forRootAsync({
@@ -48,7 +53,11 @@ import { ColaboradoresController } from './colaboradores/colaboradores.controlle
       inject: [ConfigService],
     }),
     // Aula 20: registra o Schema/Model de Produto.
-    MongooseModule.forFeature([{ name: Produto.name, schema: ProdutoSchema }]),
+    MongooseModule.forFeature([
+      { name: Produto.name, schema: ProdutoSchema },
+      // Aula 25: Model da Categoria (referenciada pelo Produto).
+      { name: Categoria.name, schema: CategoriaSchema },
+    ]),
   ],
   controllers: [
     AppController,
@@ -59,8 +68,15 @@ import { ColaboradoresController } from './colaboradores/colaboradores.controlle
     AdminController,
     ProdutosController,
     ColaboradoresController,
+    CategoriasController,
   ],
-  providers: [AppService, ConvidadosService, LivrosService, ProdutosService],
+  providers: [
+    AppService,
+    ConvidadosService,
+    LivrosService,
+    ProdutosService,
+    CategoriasService,
+  ],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {

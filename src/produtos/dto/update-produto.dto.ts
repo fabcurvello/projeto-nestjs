@@ -7,13 +7,16 @@ export class UpdateProdutoDto {
   nome?: string;
   @ApiPropertyOptional({ example: 25.9 })
   preco?: number;
+
   @ApiPropertyOptional({
-    enum: ['Eletrônicos', 'Ferramentas', 'EPI'],
+    example: '64f3a1b2c9e0d1f2a3b4c5d6',
+    description: '_id de uma categoria',
   })
   categoria?: string;
+
   @ApiPropertyOptional({ example: 3 })
   estoque?: number;
+  
   @ApiPropertyOptional({ example: true })
   ativo?: boolean;
 }
-

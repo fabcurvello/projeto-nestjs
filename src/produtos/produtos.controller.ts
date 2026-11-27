@@ -43,7 +43,7 @@ export class ProdutosController {
     return this.produtosService.create(createProdutoDto);
   }
 
-  // GET /produtos?categoria=EPI&ordenar=preco_asc&pagina=2
+  // GET /produtos?categoria=<id>&ordenar=preco_asc&pagina=2
   @Get()
   @ApiOperation({
     summary: 'Lista produtos com filtro, ordenação e paginação (5 por página)',
@@ -52,7 +52,7 @@ export class ProdutosController {
   @ApiQuery({
     name: 'categoria',
     required: false,
-    enum: ['Eletrônicos', 'Ferramentas', 'EPI'],
+    description: '_id de uma categoria',
   })
 
   @ApiQuery({
@@ -142,12 +142,11 @@ export class ProdutosController {
     status: 400,
     description: 'ID inválido ou produto ainda possui itens em estoque.',
   })
-
+  
   @ApiResponse({
     status: 404,
     description: 'Produto não encontrado.',
   })
-  
   async remover(@Param('id') id: string) {
     await this.produtosService.delete(id);
   }
